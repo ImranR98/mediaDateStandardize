@@ -6,7 +6,6 @@ After=network.target
 User=root
 Group=root
 Type=simple
-DynamicUser=yes
 Restart=on-failure
 RestartSec=5s
 ExecStart=/bin/bash -c 'export NTFY_URL="" && export NTFY_TOKEN="" && /MediaDateStandardize/mediaDateStandardizeCopyLoop.sh "/Source" "/Destination"'

@@ -51,13 +51,14 @@ while [ true ]; do
         FILE_NAME="$(basename "$file")"
         if [ "$(isLikelyStandardString "$FILE_NAME")" == false ] &&
             [ -z "$(echo "$FILE_NAME" | grep -E '^\.pending.+')" ] &&
+            [ -z "$(echo "$FILE_NAME" | grep -E '^\.syncthing.+')" ] &&
             [ -z "$(echo "$FILE_NAME" | grep -E '^\.stfolder$')" ] &&
             [ -z "$(echo "$FILE_NAME" | grep -E '^\.stignore$')" ]; then
             mkdir -p "$1"/FAILED_ITEMS
             STD_OUTPUT="$(standardize "$file")"
             NEW_PATH="$(echo "$STD_OUTPUT" | grep -E '^Renamed to ' | tail -c +12)"
             if [ -z "$NEW_PATH" ]; then
-                errorNotif "Failed to standardize "$file""
+                errorNotif "Failed to standardize ""$file"""
                 mv "$file" "$1"/FAILED_ITEMS/"$FILE_NAME"
                 continue
             fi
@@ -69,7 +70,7 @@ while [ true ]; do
                     rm "$NEW_PATH"
                 fi
             else
-                errorNotif "Failed to copy "$file""
+                errorNotif "Failed to copy ""$file"""
                 mv "$NEW_PATH" "$1"/FAILED_ITEMS/"$NEW_NAME"
             fi
         fi
