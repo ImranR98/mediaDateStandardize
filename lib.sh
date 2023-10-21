@@ -38,7 +38,7 @@ processFilesInDirInParallel() {
     NUMBER_SPLITS="$(grep -c ^processor /proc/cpuinfo)"
 
     # Grab the list of files in the target directory
-    FILES="$(find "$TARGET_DIR" -type f | tail -n +2)"
+    FILES="$(find "$TARGET_DIR" -type f)"
 
     # Work out number of files to be processed by each task
     NUM_FILES="$(echo "$FILES" | wc -l)"
