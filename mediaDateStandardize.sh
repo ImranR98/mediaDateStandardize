@@ -3,7 +3,7 @@
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib.sh
 
 # ===============
-# ExifStandardize
+# MediaDateStandardize
 # ===============
 # Uses ExifTool to process all files in a specified directory in the following way:
 # - First, pick a date from the file's metadata. If it has a DateTimeOriginal, use that, otherwise use the oldest available date.
