@@ -10,13 +10,21 @@ usage() {
 
 if [ ! -d "$1" ] || [ ! -d "$2" ]; then
     usage
-    log "One or both directory arguments is invalid" 1 1
+    log "One or both directory arguments is invalid: $1, $2" 1 1
 fi
 
 readarray -t files < <(find "$1" -maxdepth 1 -type f)
 for file in "${files[@]}"; do
-    NEW_PATH="$2"/"$(basename "$file")"
-    if [ -f "$NEW_PATH" ] && [ "$(sha256sum "$NEW_PATH" | awk '{print $1}')" == "$(sha256sum "$file" | awk '{print $1}')" ]; then
-        rm "$file"
+    FILE_NAME="$(basename "$file")"
+    if [ -z "$(echo "$FILE_NAME" | grep -E '^\.pending.+')" ] &&
+        [ -z "$(echo "$FILE_NAME" | grep -E '^\.syncthing.+')" ] &&
+        [ -z "$(echo "$FILE_NAME" | grep -E '^\.stfolder$')" ] &&
+        [ -z "$(echo "$FILE_NAME" | grep -E '^\.stignore$')" ]; then
+        NEW_PATH="$2"/"$FILE_NAME"
+        if [ -f "$NEW_PATH" ] && [ "$(sha256sum "$NEW_PATH" | awk '{print $1}')" == "$(sha256sum "$file" | awk '{print $1}')" ]; then
+            rm "$file"
+        else
+            log "Not synced - ignoring: "$FILE_NAME""
+        fi
     fi
 done
