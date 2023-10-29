@@ -139,7 +139,6 @@ isLikelyStandardString() {
 }
 
 isFileMedia() {
-    file_type="$(file -b --mime-type "$1")"
     if [[ "$file_type" =~ ^(image|video|audio)/ ]]; then
         echo true
     else
