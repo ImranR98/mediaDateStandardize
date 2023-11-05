@@ -139,7 +139,7 @@ isLikelyStandardString() {
 }
 
 isFileMedia() {
-    if [[ "$file_type" =~ ^(image|video|audio)/ ]]; then
+    if [[ "$(file -b --mime-type "$1")" =~ ^(image|video|audio)/ ]]; then
         echo true
     else
         echo false
@@ -148,7 +148,6 @@ isFileMedia() {
 
 # Define the function to run on the batch of target files
 standardize() {
-    file -b --mime-type "$1"
     if [ "$(isFileMedia "$1")" == false ]; then
         log 'File is not a media file: '"$1" 1
     else
