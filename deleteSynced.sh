@@ -24,7 +24,8 @@ for file in "${files[@]}"; do
         if [ -f "$NEW_PATH" ] && [ "$(sha256sum "$NEW_PATH" | awk '{print $1}')" == "$(sha256sum "$file" | awk '{print $1}')" ]; then
             rm "$file"
         else
-            log "Not synced - ignoring: "$FILE_NAME""
+            log "Not synced - syncing: "$FILE_NAME""
+            mv "$file" "$NEW_PATH"
         fi
     fi
 done
