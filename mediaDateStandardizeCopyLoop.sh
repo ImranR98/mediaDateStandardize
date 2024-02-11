@@ -9,10 +9,10 @@ usage() {
     echo >&2 "  - All other dates in the file's metadata are set to the chosen value."
     echo >&2 "  - The file is renamed, based on the chosen date, to the following standard format: YYYY-MM-DD-HH-MM-SS-(<original-name>).ext"
     echo >&2 "  - Copy the renamed file to a destination directory"
-    echo >&2 "This is done every 5 minutes. Files that were already processed are left intact, and files that cannot be processed are moved to a subdirectory."
+    echo >&2 "This is done whenever files in the dir change. Files that were already processed are left intact, and files that cannot be processed are moved to a subdirectory."
     echo >&2 "If a file could not be processed and the NTFY_URL (with an optional NTFY_TOKEN) environment variable exists, a ntfy.sh notification is triggered."
     echo >&2 ""
-    echo >&2 "      -d              If this option is set, processed files are deleted from the original directory."
+    echo >&2 "      -d              If this option is set, processed files are deleted from the original directory after a 60 minute wait."
     echo >&2 ""
 }
 
@@ -67,7 +67,7 @@ while [ true ]; do
             if [ "$(sha256sum "$NEW_PATH" | awk '{print $1}')" == "$(sha256sum "$2"/"$NEW_NAME" | awk '{print $1}')" ]; then
                 log "Standardized "$file""
                 if [ "$DELETE" == true ]; then
-                    rm "$NEW_PATH"
+                    (sleep 3600 && rm "$NEW_PATH") &
                 fi
             else
                 errorNotif "Failed to copy ""$file"""
