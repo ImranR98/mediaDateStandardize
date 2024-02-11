@@ -1,6 +1,5 @@
 FROM ubuntu
-RUN apt update
-RUN apt install -y curl exiftool inotify-tools file
+RUN apt update && apt install -y apt-transport-https && apt install -y curl exiftool inotify-tools file
 VOLUME /source
 VOLUME /destination
 ENV NTFY_URL=
