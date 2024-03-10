@@ -139,7 +139,8 @@ isLikelyStandardString() {
 }
 
 isFileMedia() {
-    if [[ "$(file -b --mime-type "$1")" =~ ^(image|video|audio)/ ]]; then
+    type="$(file -b --mime-type "$1")"
+    if [[ "$type" =~ ^(image|video|audio)/ ]] || [[ "$type" == "application/octet-stream" ]]; then
         echo true
     else
         echo false
