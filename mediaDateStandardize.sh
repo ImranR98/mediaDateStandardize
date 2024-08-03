@@ -44,8 +44,8 @@ if [ ! -d "$1" ]; then
     log "No valid target directory provided" 1 1
 fi
 
-# Ensure ExifTool is installed
-ensureCommands exiftool
+# Ensure ExifTool and FFmpeg are installed
+ensureCommands exiftool ffmpeg
 
 # Run the function in parallel on all target files
 processFilesInDirInParallel "$1" "$COMMAND"

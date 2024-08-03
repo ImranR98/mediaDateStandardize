@@ -11,5 +11,3 @@ Shell scripts that use [ExifTool](https://exiftool.org/) to "standardize" the Ex
   - This can optionally notify the user via [ntfy.sh](https://ntfy.sh/) when there is a failure to standardize a file.
   - It can also optionally delete the files from the original directory.
   - A Dockerfile is provided for simple deployment of this script.
-
-<!-- TODO: `ffmpeg -y -err_detect ignore_err -i test.mp4 -c copy test.mp4` can be used to fix "truncated" files. Add to script when you have a sample to test with. -->

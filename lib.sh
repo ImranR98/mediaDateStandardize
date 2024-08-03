@@ -164,9 +164,28 @@ standardize() {
 
 # Run the standardize function, but first change the file Exif dates according to the file name first
 standardizeWithFName() {
-    exiftool -m -q "-FileName > DateTimeOriginal" "${1}" -overwrite_original -api LargeFileSupport=1
+    checkAndFixTruncError "${1}" # Only in "with filename" case (in regular case, ffmpeg fix may cause date loss)
+    exiftool -m -q "-FileName > DateTimeOriginal" "${1}" -overwrite_original -api LargeFileSupport=1 || echo AAA
     exiftool -m -q "-FileName > CreateDate" "${1}" -overwrite_original -api LargeFileSupport=1
     exiftool -m -q "-FileName > MediaCreateDate" "${1}" -overwrite_original -api LargeFileSupport=1
     exiftool -m -q "-FileName > TrackCreateDate" "${1}" -overwrite_original -api LargeFileSupport=1
     standardize "$1"
+}
+
+checkForTruncError() {
+    RANDOM_FILENAME=/tmp/$RANDOM$RANDOM$RANDOM
+    TEST_RESULT="$(exiftool -m -q "-FileName > DateTimeOriginal" "${1}" -api LargeFileSupport=1 -o "$RANDOM_FILENAME" 2>&1 && rm "$RANDOM_FILENAME")"
+    if [ $? != 0 ] && [ -n "$(echo "$TEST_RESULT" | grep -E '^Error: Truncated')" ]; then
+        echo true
+    else
+        echo false
+    fi
+}
+
+checkAndFixTruncError() {
+    if [ "$(checkForTruncError "${1}")" = true ]; then
+        mv "${1}" "${1}.trunc_error"
+        echo "WARNING: '${1}' file had a \"truncated\" error; the problem was fixed in a copy - the original file has been renamed."
+        ffmpeg -y -err_detect ignore_err -i "${1}.trunc_error" -c copy "${1}"
+    fi
 }
