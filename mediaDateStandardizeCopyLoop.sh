@@ -32,12 +32,16 @@ if [ ! -d "$1" ] || [ ! -d "$2" ]; then
 fi
 
 notif() {
-    log "$1" 1
     PRIORITY=default
     if [ "$2" = low ]; then
         PRIORITY=low
     elif [ "$2" = high ]; then
         PRIORITY=high
+    fi
+    if [ "$PRIORITY" = low ]; then
+        log "$1"
+    else
+        log "$1" 1
     fi
     if [ -n "$NTFY_URL" ]; then
         curlFn="curl -s -H \"Priority: $PRIORITY\" -H \"Title: Exif Standardize\" -d \""$1"\""
