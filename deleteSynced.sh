@@ -21,11 +21,13 @@ for file in "${files[@]}"; do
         [ -z "$(echo "$FILE_NAME" | grep -E '^\.stfolder$')" ] &&
         [ -z "$(echo "$FILE_NAME" | grep -E '^\.stignore$')" ]; then
         NEW_PATH="$2"/"$FILE_NAME"
+        if [ ! -f "$NEW_PATH" ]; then
+            NEW_PATH="$2"/"$(ls "$2" | grep -Eo "-\(${FILE_NAME%.*}\)")"
+        fi
         if [ -f "$NEW_PATH" ] && [ "$(sha256sum "$NEW_PATH" | awk '{print $1}')" == "$(sha256sum "$file" | awk '{print $1}')" ]; then
             rm "$file"
         else
-            log "Not synced - syncing: "$FILE_NAME""
-            mv "$file" "$NEW_PATH"
+            log "Not synced: "$FILE_NAME""
         fi
     fi
 done

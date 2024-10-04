@@ -12,7 +12,7 @@ usage() {
     echo >&2 "This is done whenever files in the dir change. Files that were already processed are left intact, and files that cannot be processed are moved to a subdirectory."
     echo >&2 "If a file could not be processed and the NTFY_URL (with an optional NTFY_TOKEN) environment variable exists, a ntfy.sh notification is triggered."
     echo >&2 ""
-    echo >&2 "      -d              If this option is set, processed files are deleted from the original directory after a 60 minute wait."
+    echo >&2 "      -d              If this option is set, processed files are moved instead of copied from the original directory."
     echo >&2 ""
 }
 
@@ -31,10 +31,16 @@ if [ ! -d "$1" ] || [ ! -d "$2" ]; then
     log "One or both directory arguments is invalid" 1 1
 fi
 
-errorNotif() {
+notif() {
     log "$1" 1
+    PRIORITY=default
+    if [ "$2" = low ]; then
+        PRIORITY=low
+    elif [ "$2" = high ]; then
+        PRIORITY=high
+    fi
     if [ -n "$NTFY_URL" ]; then
-        curlFn="curl -s -H \"Title: Exif Standardize Error\" -d \""$1"\""
+        curlFn="curl -s -H \"Priority: $PRIORITY\" -H \"Title: Exif Standardize\" -d \""$1"\""
         if [ -n "$NTFY_TOKEN" ]; then
             curlFn=""$curlFn" -u :"$NTFY_TOKEN""
         fi
@@ -55,22 +61,25 @@ while [ true ]; do
             [ -z "$(echo "$FILE_NAME" | grep -E '^\.stfolder$')" ] &&
             [ -z "$(echo "$FILE_NAME" | grep -E '^\.stignore$')" ]; then
             mkdir -p "$1"/FAILED_ITEMS
+            if [ ! -f "$1"/.stignore ] || [ -z "$(grep -Eo '^FAILED_ITEMS/$' "$1"/.stignore)" ]; then
+                echo "FAILED_ITEMS/" >>"$1"/.stignore
+            fi
             STD_OUTPUT="$(standardize "$file")"
             NEW_PATH="$(echo "$STD_OUTPUT" | grep -E '^Renamed to ' | tail -c +12)"
             if [ -z "$NEW_PATH" ]; then
-                errorNotif "Failed to standardize ""$file"""
+                notif "Failed to standardize ""$file"""
                 mv "$file" "$1"/FAILED_ITEMS/"$FILE_NAME"
                 continue
             fi
             NEW_NAME="$(basename "$NEW_PATH")"
             cp "$NEW_PATH" "$2"/"$NEW_NAME"
             if [ "$(sha256sum "$NEW_PATH" | awk '{print $1}')" == "$(sha256sum "$2"/"$NEW_NAME" | awk '{print $1}')" ]; then
-                log "Standardized "$file""
+                notif "Standardized "$file"" low
                 if [ "$DELETE" == true ]; then
-                    (sleep 3600 && rm "$NEW_PATH") &
+                    (rm "$NEW_PATH") &
                 fi
             else
-                errorNotif "Failed to copy ""$file"""
+                notif "Failed to copy ""$file""" high
                 mv "$NEW_PATH" "$1"/FAILED_ITEMS/"$NEW_NAME"
             fi
         fi
