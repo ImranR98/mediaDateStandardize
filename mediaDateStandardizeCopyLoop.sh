@@ -69,13 +69,13 @@ while [ true ]; do
             rm "$TEMP_PATH"
             NEW_PATH="$(echo "$STD_OUTPUT" | grep -E '^Renamed to ' | tail -c +12)"
             if [ -z "$NEW_PATH" ]; then
-                notif "Failed to standardize ""$file"""
+                notif "Failed to standardize ""$FILE_NAME"""
                 continue
             fi
             NEW_NAME="$(basename "$NEW_PATH")"
             mv "$NEW_PATH" "$2"/"$NEW_NAME"
             if [ "$(sha256sum "$NEW_PATH" | awk '{print $1}')" == "$(sha256sum "$2"/"$NEW_NAME" | awk '{print $1}')" ]; then
-                notif "Standardized "$file"" low
+                notif "Standardized "$FILE_NAME"" low
                 if [ "$DELETE" == true ]; then
                     (rm "$file") &
                 fi
