@@ -5,7 +5,7 @@ VOLUME /destination
 ENV NTFY_URL=
 ENV NTFY_TOKEN=
 COPY . .
-ENTRYPOINT bash ./mediaDateStandardizeCopyLoop.sh -d /source /destination
+ENTRYPOINT ["bash", "./mediaDateStandardizeCopyLoop.sh", "-d", "/source", "/destination"]
 
 # docker build -t media-date-standardize-copy-loop .
 # docker run -v ~/Pictures:/source -v ~/Downloads:/destination --user 1000 \

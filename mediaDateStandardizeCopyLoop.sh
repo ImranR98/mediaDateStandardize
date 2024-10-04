@@ -8,8 +8,8 @@ usage() {
     echo >&2 "  - First, pick a date from the file's metadata. If it has a DateTimeOriginal, use that, otherwise use the oldest available date."
     echo >&2 "  - All other dates in the file's metadata are set to the chosen value."
     echo >&2 "  - The file is renamed, based on the chosen date, to the following standard format: YYYY-MM-DD-HH-MM-SS-(<original-name>).ext"
-    echo >&2 "  - Copy the renamed file to a destination directory"
-    echo >&2 "This is done whenever files in the dir change. Files that were already processed are left intact, and files that cannot be processed are moved to a subdirectory."
+    echo >&2 "  - Copy the modified file to a destination directory, leaving the original as-is"
+    echo >&2 "This is done whenever files in the dir change."
     echo >&2 "If a file could not be processed and the NTFY_URL (with an optional NTFY_TOKEN) environment variable exists, a ntfy.sh notification is triggered."
     echo >&2 ""
     echo >&2 "      -d              If this option is set, processed files are moved instead of copied from the original directory."
@@ -49,38 +49,38 @@ notif() {
     fi
 }
 
+TEMP_PROCESSING_DIR="$(mktemp -d)"
+trap "rm -rf "$TEMP_PROCESSING_DIR"" EXIT
+
 while [ true ]; do
     timeout --foreground 300 inotifywait -qq -e modify,create,delete "$1"
     sleep 1
     readarray -t files < <(find "$1" -maxdepth 1 -type f)
     for file in "${files[@]}"; do
+        rsync -t "$file" "$TEMP_PROCESSING_DIR"/
         FILE_NAME="$(basename "$file")"
+        TEMP_PATH="$TEMP_PROCESSING_DIR"/"$FILE_NAME"
         if [ "$(isLikelyStandardString "$FILE_NAME")" == false ] &&
             [ -z "$(echo "$FILE_NAME" | grep -E '^\.pending.+')" ] &&
             [ -z "$(echo "$FILE_NAME" | grep -E '^\.syncthing.+')" ] &&
             [ -z "$(echo "$FILE_NAME" | grep -E '^\.stfolder$')" ] &&
             [ -z "$(echo "$FILE_NAME" | grep -E '^\.stignore$')" ]; then
-            mkdir -p "$1"/FAILED_ITEMS
-            if [ ! -f "$1"/.stignore ] || [ -z "$(grep -Eo '^FAILED_ITEMS/$' "$1"/.stignore)" ]; then
-                echo "FAILED_ITEMS/" >>"$1"/.stignore
-            fi
-            STD_OUTPUT="$(standardize "$file")"
+            STD_OUTPUT="$(standardize "$TEMP_PATH")"
+            rm "$TEMP_PATH"
             NEW_PATH="$(echo "$STD_OUTPUT" | grep -E '^Renamed to ' | tail -c +12)"
             if [ -z "$NEW_PATH" ]; then
                 notif "Failed to standardize ""$file"""
-                mv "$file" "$1"/FAILED_ITEMS/"$FILE_NAME"
                 continue
             fi
             NEW_NAME="$(basename "$NEW_PATH")"
-            cp "$NEW_PATH" "$2"/"$NEW_NAME"
+            mv "$NEW_PATH" "$2"/"$NEW_NAME"
             if [ "$(sha256sum "$NEW_PATH" | awk '{print $1}')" == "$(sha256sum "$2"/"$NEW_NAME" | awk '{print $1}')" ]; then
                 notif "Standardized "$file"" low
                 if [ "$DELETE" == true ]; then
-                    (rm "$NEW_PATH") &
+                    (rm "$file") &
                 fi
             else
-                notif "Failed to copy ""$file""" high
-                mv "$NEW_PATH" "$1"/FAILED_ITEMS/"$NEW_NAME"
+                notif "Failed to move ""$TEMP_PATH"" to $1." high
             fi
         fi
     done
