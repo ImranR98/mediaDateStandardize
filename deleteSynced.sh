@@ -22,12 +22,12 @@ for file in "${files[@]}"; do
         [ -z "$(echo "$FILE_NAME" | grep -E '^\.stignore$')" ]; then
         NEW_PATH="$2"/"$FILE_NAME"
         if [ ! -f "$NEW_PATH" ]; then
-            NEW_PATH="$2"/"$(ls "$2" | grep -Eo "-\(${FILE_NAME%.*}\)")"
+            NEW_PATH="$(getStandardizedIfExists "$FILE_NAME" "$2")"
         fi
-        if [ -f "$NEW_PATH" ] && [ "$(sha256sum "$NEW_PATH" | awk '{print $1}')" == "$(sha256sum "$file" | awk '{print $1}')" ]; then
+        if [ -f "$NEW_PATH" ]; then
             rm "$file"
         else
-            log "Not synced: "$FILE_NAME""
+            log "Not synced: $FILE_NAME"
         fi
     fi
 done

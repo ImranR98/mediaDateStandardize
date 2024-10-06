@@ -44,25 +44,29 @@ notif() {
         log "$1" 1
     fi
     if [ -n "$NTFY_URL" ]; then
-        curlFn="curl -s -H \"Priority: $PRIORITY\" -H \"Title: Exif Standardize\" -d \""$1"\""
+        curlFn="curl -s -H \"Priority: $PRIORITY\" -H \"Title: Exif Standardize\" -d \"$1\""
         if [ -n "$NTFY_TOKEN" ]; then
-            curlFn=""$curlFn" -u :"$NTFY_TOKEN""
+            curlFn="$curlFn -u :$NTFY_TOKEN"
         fi
-        curlFn=""$curlFn" "$NTFY_URL""
+        curlFn="$curlFn $NTFY_URL"
         eval "$curlFn"
     fi
 }
 
 TEMP_PROCESSING_DIR="$(mktemp -d)"
-trap "rm -rf "$TEMP_PROCESSING_DIR"" EXIT
+trap "rm -rf \"$TEMP_PROCESSING_DIR\"" EXIT
 
 while [ true ]; do
     timeout --foreground 300 inotifywait -qq -e modify,create,delete "$1"
     sleep 1
     readarray -t files < <(find "$1" -maxdepth 1 -type f)
     for file in "${files[@]}"; do
-        rsync -t "$file" "$TEMP_PROCESSING_DIR"/
         FILE_NAME="$(basename "$file")"
+        if [ -n "$(getStandardizedIfExists "$FILE_NAME" "$2")" ]; then
+            echo "Already synced: $file"
+            continue
+        fi
+        rsync -t "$file" "$TEMP_PROCESSING_DIR"/
         TEMP_PATH="$TEMP_PROCESSING_DIR"/"$FILE_NAME"
         if [ "$(isLikelyStandardString "$FILE_NAME")" == false ] &&
             [ -z "$(echo "$FILE_NAME" | grep -E '^\.pending.+')" ] &&
@@ -72,18 +76,18 @@ while [ true ]; do
             STD_OUTPUT="$(standardize "$TEMP_PATH")"
             NEW_PATH="$(echo "$STD_OUTPUT" | grep -E '^Renamed to ' | tail -c +12)"
             if [ -z "$NEW_PATH" ]; then
-                notif "Failed to standardize ""$FILE_NAME"""
+                notif "Failed to standardize $FILE_NAME"
                 continue
             fi
             NEW_NAME="$(basename "$NEW_PATH")"
             mv "$NEW_PATH" "$2"/"$NEW_NAME"
             if [ "$(sha256sum "$2"/"$NEW_NAME" | awk '{print $1}')" == "$(sha256sum "$2"/"$NEW_NAME" | awk '{print $1}')" ]; then
-                notif "Standardized "$FILE_NAME"" low
+                notif "Standardized $FILE_NAME" low
                 if [ "$DELETE" == true ]; then
                     (rm "$file") &
                 fi
             else
-                notif "Failed to move ""$TEMP_PATH"" to $2." high
+                notif "Failed to move $TEMP_PATH to $2." high
             fi
         fi
     done
