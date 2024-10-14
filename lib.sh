@@ -193,7 +193,7 @@ checkAndFixTruncError() {
 getStandardizedIfExists() {
     ORIGINAL_FILE_NAME="$1"
     DEST_DIR="$2"
-    NEW_PATH="$DEST_DIR"/"$(ls "$DEST_DIR" | grep -Eo ".+-\(${ORIGINAL_FILE_NAME%.*}\).+")"
+    NEW_PATH="$DEST_DIR"/"$(ls "$DEST_DIR" | grep -o ".*-(${ORIGINAL_FILE_NAME%.*}).*")"
     if [ -f "$NEW_PATH" ] && [ "$(isLikelyStandardString "$(basename "$NEW_PATH")")" = true ]; then
         echo "$NEW_PATH"
     fi
