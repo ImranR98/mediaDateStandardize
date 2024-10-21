@@ -57,7 +57,7 @@ TEMP_PROCESSING_DIR="$(mktemp -d)"
 trap "rm -rf \"$TEMP_PROCESSING_DIR\"" EXIT
 
 while [ true ]; do
-    timeout --foreground 300 inotifywait -qq -e modify,create,delete "$1"
+    timeout --foreground 300 inotifywait -qq -e modify,create "$1"
     sleep 1
     readarray -t files < <(find "$1" -maxdepth 1 -type f)
     for file in "${files[@]}"; do
@@ -69,10 +69,7 @@ while [ true ]; do
         rsync -t "$file" "$TEMP_PROCESSING_DIR"/
         TEMP_PATH="$TEMP_PROCESSING_DIR"/"$FILE_NAME"
         if [ "$(isLikelyStandardString "$FILE_NAME")" == false ] &&
-            [ -z "$(echo "$FILE_NAME" | grep -E '^\.pending.+')" ] &&
-            [ -z "$(echo "$FILE_NAME" | grep -E '^\.syncthing.+')" ] &&
-            [ -z "$(echo "$FILE_NAME" | grep -E '^\.stfolder$')" ] &&
-            [ -z "$(echo "$FILE_NAME" | grep -E '^\.stignore$')" ]; then
+            [ -z "$(echo "$FILE_NAME" | grep -E '^\..+')" ]; then
             STD_OUTPUT="$(standardize "$TEMP_PATH")"
             NEW_PATH="$(echo "$STD_OUTPUT" | grep -E '^Renamed to ' | tail -c +12)"
             if [ -z "$NEW_PATH" ]; then
