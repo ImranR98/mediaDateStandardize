@@ -77,14 +77,39 @@ findRealExifDate() {
     # Figure out what date to use (valid DateTimeOriginal if available, else the oldest valid date available)
     DATE_TO_USE=''
     DTO="$(exiftool -m -q "$FILE" -datetimeoriginal -api LargeFileSupport=1 | awk -F ': ' '{print $2}' | grep -v 0000 | grep -v -e "[0-9][0-9][0-9][0-9]:[0-9][0-9]$")"           # DateTimeOriginal
-    OD="$(exiftool -m -q "$FILE" -api LargeFileSupport=1 | grep Date | grep -v 0000 | grep -v -e "[0-9][0-9][0-9][0-9]:[0-9][0-9]$" | awk -F ': ' '{print $2}' | sort | head -1)" # Oldest date
-    # if [ ! -z "$(echo "$DTO" | grep -e "^0000")" ] || [ ! -z "$(echo "$DTO" | grep -e "[0-9][0-9][0-9][0-9]:[0-9][0-9]$")" ]; then DTO=''; fi
-    # if [ ! -z "$(echo "$OD" | grep -e "^0000")" ] || [ ! -z "$(echo "$OD" | grep -e "[0-9][0-9][0-9][0-9]:[0-9][0-9]$")" ]; then OD=''; fi
-    if [ ! -z "$DTO" ]; then
+
+	if [ -n "$DTO" ]; then
+        DATE_TO_USE="$DTO"
+    else
+		# Grab the oldest date and also account for dates formatted as YYYYMMDD with no time (in that case only consider it if it is an older day than others)
+		OD="$(exiftool -m -q "$FILE" -api LargeFileSupport=1 | grep Date | grep -v Access | grep -v Inode | grep -v 0000 | grep -v -e "[0-9][0-9][0-9][0-9]:[0-9][0-9]$" | awk -F ': ' '{print $2}' | grep -v -E '^[0-9]+$' | sort | head -1)"
+		OD_YYYYMMDD="$(exiftool -m -q "$FILE" -api LargeFileSupport=1 | grep Date | grep -v Access | grep -v Inode | grep -v 0000 | grep -v -e "[0-9][0-9][0-9][0-9]:[0-9][0-9]$" | awk -F ': ' '{print $2}' | grep -E '^[0-9]{8}$' | sort | head -1)"
+		if [ -n "$OD_YYYYMMDD" ] && [ "${OD_YYYYMMDD:0:4}:${OD_YYYYMMDD:4:2}:${OD_YYYYMMDD:4:2}" != "$(echo "$OD" | awk '{print $1}')" ]; then
+			formatted_time="0:00"
+			FILE_PREFIX="$(basename "$FILE" | awk '{print $1}')"
+			if [[ "$FILE_PREFIX" =~ ^([0-9]{8})_([0-9]{3})$ ]]; then # Custom file format to set HHMM, for my custom use case
+    			suffix="${BASH_REMATCH[2]}"
+				hours=${suffix:0:1}
+				minutes=${suffix:1:2}
+    			if [ "$minutes" -ge 60 ]; then
+        			hours=$((hours + minutes / 60))
+        			minutes=$((minutes % 60))
+    			fi
+    			hours=$((hours % 24))
+				printf -v hours "%02d" "$((10#$hours))"
+				printf -v minutes "%02d" "$((10#$minutes))"
+				formatted_time="$hours:$minutes"
+			fi
+			OD_YYYYMMDD_FORMATTED="$(date -d $OD_YYYYMMDD "+%Y:%m:%d $formatted_time%:z")"
+			OD="$(echo "$OD_YYYYMMDD_FORMATTED
+$OD" | sort | head -1)"
+		fi
+	fi
+	if [ ! -z "$DTO" ]; then
         DATE_TO_USE="$DTO"
     elif [ ! -z "$OD" ]; then
         DATE_TO_USE="$OD"
-    fi
+    fi	
     # Print the date found (or nothing)
     echo "$DATE_TO_USE"
 }
@@ -106,6 +131,7 @@ setExifDates() {
     exiftool -m -q "-MediaModifyDate = ${DATA}" "${1}" -overwrite_original -api LargeFileSupport=1
     exiftool -m -q "-TrackModifyDate = ${DATA}" "${1}" -overwrite_original -api LargeFileSupport=1
     exiftool -m -q "-FileModifyDate = ${DATA}" "${1}" -overwrite_original -api LargeFileSupport=1
+	exiftool -m -q "-ContentCreateDate = ${DATA}" "${1}" -overwrite_original -api LargeFileSupport=1 2>/dev/null || : # Video only
 }
 
 # Takes a path to a file (not validated), uses ExifTool to find the file's DateTimeOriginal tag, and renames the file accordingly (leaving the original name in appended brackets)
@@ -157,7 +183,9 @@ standardize() {
             log 'No date found for file: '"$1" 1
         else
             setExifDates "$1" "$DATE"
-            renameFileByDateTimeOriginal "$1"
+			if [ "$NORENAME" != true ]; then
+            	renameFileByDateTimeOriginal "$1"
+			fi
         fi
     fi
 }

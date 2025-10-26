@@ -14,21 +14,23 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib.sh
 
 # Usage function
 usage() {
-    echo >&2 "Usage: $(basename $0) [-n] [path to directory]"
+    echo >&2 "Usage: $(basename $0) [-n] [-p] [path to directory]"
     echo >&2 "Uses ExifTool to process all files in a specified directory in the following way:"
     echo >&2 "  - First, pick a date from the file's metadata. If it has a DateTimeOriginal, use that, otherwise use the oldest available date."
     echo >&2 "  - All other dates in the file's metadata are set to the chosen value."
     echo >&2 "  - The file is renamed, based on the chosen date, to the following standard format: YYYY-MM-DD-HH-MM-SS-(<original-name>).ext"
     echo >&2 ""
     echo >&2 "      -n              If this option is set, a date will be extracted from the file name instead if possible."
+    echo >&2 "      -p              If this option is set, the file will not be renamed."
     echo >&2 ""
 }
 
 # Decide what command to use based on whether the -n option is set
 COMMAND="standardize"
-while getopts "n" opt; do
+while getopts "np" opt; do
     case $opt in
     n) COMMAND="standardizeWithFName" ;;
+	p) NORENAME="true" ;;
     \?) usage && exit 1 ;;
     esac
 done
@@ -48,6 +50,7 @@ fi
 ensureCommands exiftool ffmpeg
 
 # Run the function in parallel on all target files
+export NORENAME="$NORENAME"
 processFilesInDirInParallel "$1" "$COMMAND"
 
 log "Done!"
